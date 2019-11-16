@@ -43,11 +43,6 @@ func (p *Proxy) Start() error {
 		return err
 	}
 
-	rconn, err := net.DialTCP("tcp", nil, raddr)
-	if err != nil {
-		return err
-	}
-
 	p.laddr = laddr
 	p.raddr = raddr
 
@@ -62,6 +57,15 @@ func (p *Proxy) Start() error {
 			log.Printf("Failed to accept connection '%s'", err)
 			continue
 		}
+
+		defer conn.Close()
+
+		rconn, err := net.DialTCP("tcp", nil, raddr)
+		if err != nil {
+			conn.Close()
+			return err
+		}
+		defer rconn.Close()
 
 		go io.Copy(rconn, conn)
 		go io.Copy(conn, rconn)
