@@ -63,12 +63,23 @@ func (p *Proxy) Start() error {
 		rconn, err := net.DialTCP("tcp", nil, raddr)
 		if err != nil {
 			conn.Close()
-			return err
+			continue
 		}
 		defer rconn.Close()
 
-		go io.Copy(rconn, conn)
-		go io.Copy(conn, rconn)
+		closeChan := make(chan int, 2)
+
+		go func() {
+			io.Copy(rconn, conn)
+			closeChan <- 1
+		}()
+		go func() {
+			io.Copy(conn, rconn)
+			closeChan <- 1
+		}()
+		<-closeChan
+		rconn.Close()
+		conn.Close()
 	}
 }
 
